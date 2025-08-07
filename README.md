@@ -34,7 +34,7 @@ An advanced AI pipeline that automatically converts 2D sketches into 3D models e
 
 ```bash
 # Clone the repository
-git clone https://github.com/KLN-AI/drawgen.git
+git clone https://github.com/matrxx/drawgen.git
 cd drawgen
 
 # Automatic setup
@@ -279,42 +279,6 @@ Drawgen supports multiple languages:
 
 - **🎯 Average Accuracy** : 92%
 - **⚡ Average Processing Time** : 28 seconds
-- **📈 Sketches Processed** : 10,000+
-- **🌍 Active Users** : 500+
-- **🏢 Enterprise Clients** : 50+
-
-### 💬 User Testimonials
-
-> "Drawgen revolutionized our prototyping workflow. From rough sketches to usable 3D models in seconds!"
-> 
-> — **Sarah M.**, Product Designer at TechCorp
-
-> "The API is incredibly easy to integrate. Perfect for our educational application."
-> 
-> — **Chen L.**, Lead Developer at EduTech
-
-> "As an indie game developer, Drawgen saves me hours of 3D modeling work."
-> 
-> — **Alex R.**, Indie Game Developer
-
-## 🎖️ Awards & Recognition
-
-- 🥇 **Best AI Tool 2024** - TechCrunch Disrupt
-- 🌟 **Featured Project** - GitHub Trending
-- 📺 **Demo Day Winner** - Y Combinator W24
-- 🏆 **Innovation Award** - AI Summit 2024
-
-## 📺 Media & Presentations
-
-### 🎥 Videos
-- [Complete Demo (5 min)](https://youtube.com/watch?v=drawgen-demo)
-- [Technical Architecture](https://youtube.com/watch?v=drawgen-tech)
-- [Developer Tutorial](https://youtube.com/watch?v=drawgen-dev)
-
-### 📝 Articles & Blogs
-- [Building Drawgen: From PyTorch to Production](https://medium.com/@kln-ai/building-drawgen)
-- [AI-Powered Creative Tools](https://towardsdatascience.com/ai-creative-tools)
-- [The Future of 3D Content Creation](https://blog.kln-ai.com/future-3d-creation)
 
 ## 📄 License
 
@@ -322,13 +286,7 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ## 👥 Contributors
 
-- **KLN** - *Lead Developer* - [@kln-ai](https://github.com/kln-ai)
-
-### Hall of Fame 🌟
-
-Special thanks to our amazing contributors:
-
-[![Contributors](https://contrib.rocks/image?repo=kln-ai/drawgen)](https://github.com/kln-ai/drawgen/graphs/contributors)
+- **KLN** - *Lead Developer* - (https://github.com/matrxx)
 
 ## 🙏 Acknowledgments
 
@@ -338,19 +296,10 @@ Special thanks to our amazing contributors:
 - [Trimesh](https://trimsh.org/) for 3D tools
 - The amazing open-source community
 
-## 📞 Support & Community
-
 ### 💬 Community Channels
-- 🎮 **Discord** : [discord.gg/drawgen](https://discord.gg/drawgen)
 - 💬 **GitHub Discussions** : [Discussions](../../discussions)
 - 🐛 **Issues** : [Bug Reports](../../issues)
 - 📧 **Email** : support@drawgen.ai
-
-### 🌐 Social Media
-- 🐦 **Twitter** : [@drawgen_ai](https://twitter.com/drawgen_ai)
-- 📸 **Instagram** : [@drawgen.ai](https://instagram.com/drawgen.ai)
-- 💼 **LinkedIn** : [Drawgen](https://linkedin.com/company/drawgen)
-- 📺 **YouTube** : [Drawgen Channel](https://youtube.com/@drawgen)
 
 ---
 
@@ -360,6 +309,5 @@ Special thanks to our amazing contributors:
 
 [🐛 Report Bug](../../issues) • [💡 Request Feature](../../issues) • [📖 Documentation](../../wiki) • [💬 Community](https://discord.gg/drawgen)
 
-Made with ❤️ by the Drawgen team
-
+Made with ❤️ by me.
 </div>
