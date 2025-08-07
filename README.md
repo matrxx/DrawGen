@@ -8,6 +8,7 @@
 [![Build Status](https://github.com/KLN-AI/drawgen/workflows/CI/badge.svg)](https://github.com/KLN-AI/drawgen/actions)
 
 > **Transform your hand-drawn sketches into 3D models using AI**
+<img width="903" height="510" alt="DrawGen" src="https://github.com/user-attachments/assets/7e82d6bb-dd3e-453e-bbcb-3b1f2c5faa2c" />
 
 An advanced AI pipeline that automatically converts 2D sketches into 3D models exportable to Blender. Powered by PyTorch for object classification and depth estimation.
 
