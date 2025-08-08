@@ -1,12 +1,10 @@
 # config.py
-"""Configuration centralisée pour drawgen"""
+"""Centralized configuration for drawgen"""
 
 import torch
 
-# Configuration générale
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Configuration des modèles
 MODEL_CONFIG = {
     'classifier': {
         'num_classes': 50,
@@ -29,14 +27,12 @@ MODEL_CONFIG = {
     'min_confidence_threshold': 0.3
 }
 
-# Configuration génération 3D
 MESH_CONFIG = {
     'voxel_resolution': 64,
     'min_mesh_faces': 100,
     'smoothing_iterations': 2
 }
 
-# Configuration API
 API_CONFIG = {
     'host': '127.0.0.1',
     'port': 8000,
@@ -44,9 +40,10 @@ API_CONFIG = {
 }
 
 def get_config():
-    """Retourne la configuration complète"""
+    """Return the full configuration"""
     return {
         'models': MODEL_CONFIG,
         'mesh_generation': MESH_CONFIG,
         'api': API_CONFIG
+
     }
