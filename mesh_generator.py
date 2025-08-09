@@ -1,5 +1,5 @@
 # mesh_generator.py
-"""Générateur de maillages 3D à partir de cartes de profondeur"""
+"""3D Mesh Generator"""
 
 import numpy as np
 import trimesh
@@ -10,7 +10,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 class MeshGenerator:
-    """Générateur de maillages 3D à partir de cartes de profondeur et sketches"""
+    """3D Mesh Generator For Deepeness"""
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -24,15 +24,12 @@ class MeshGenerator:
         logger.info("Génération du maillage 3D...")
         
         try:
-            # Méthode principale: Marching Cubes
             mesh = self._voxel_to_mesh_marching_cubes(depth_map, sketch_mask)
             
         except Exception as e:
             logger.warning(f"Marching Cubes échoué: {e}")
-            # Fallback: génération basique selon la classe
             mesh = self._generate_fallback_mesh(class_info)
         
-        # Post-traitement
         mesh = self._clean_mesh(mesh)
         mesh = self._apply_class_specific_processing(mesh, class_info)
         
@@ -40,8 +37,7 @@ class MeshGenerator:
         return mesh
     
     def _voxel_to_mesh_marching_cubes(self, depth_map: np.ndarray, sketch_mask: np.ndarray) -> trimesh.Trimesh:
-        """Génère un maillage via l'algorithme Marching Cubes"""
-        # Création d'un volume 3D
+        """Generate Meshs Trough Marching Cubes"""
         volume = self._create_3d_volume(depth_map, sketch_mask)
         
         try:
@@ -51,7 +47,6 @@ class MeshGenerator:
                 spacing=(1.0, 1.0, 1.0)
             )
         except ValueError:
-            # Fallback avec volume simplifié
             volume = self._create_simplified_volume(depth_map, sketch_mask)
             vertices, faces, normals, values = measure.marching_cubes(
                 volume,
@@ -59,15 +54,13 @@ class MeshGenerator:
                 spacing=(1.0, 1.0, 1.0)
             )
         
-        # Normalisation des vertices
         vertices = self._normalize_vertices(vertices)
         
-        # Création du mesh
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
         return mesh
     
     def _create_3d_volume(self, depth_map: np.ndarray, sketch_mask: np.ndarray) -> np.ndarray:
-        """Crée un volume 3D à partir d'une carte de profondeur"""
+        """3D Volume Through Depth Map"""
         height, width = depth_map.shape
         depth_layers = 32
         
@@ -83,7 +76,7 @@ class MeshGenerator:
         return volume
     
     def _create_simplified_volume(self, depth_map: np.ndarray, sketch_mask: np.ndarray) -> np.ndarray:
-        """Version simplifiée du volume pour fallback"""
+        """Simplified Fallback Version"""
         small_depth = depth_map[::2, ::2]
         small_mask = sketch_mask[::2, ::2]
         
@@ -101,7 +94,7 @@ class MeshGenerator:
         return volume
     
     def _normalize_vertices(self, vertices: np.ndarray) -> np.ndarray:
-        """Normalise les vertices du maillage"""
+        """Standard Vertice"""
         center = np.mean(vertices, axis=0)
         vertices_centered = vertices - center
         
@@ -114,7 +107,7 @@ class MeshGenerator:
         return vertices_normalized
     
     def _generate_fallback_mesh(self, class_info: Dict[str, Any]) -> trimesh.Trimesh:
-        """Génère un maillage de base selon la classe d'objet"""
+        """Generate meshs through object class"""
         class_name = class_info.get('class_name', 'unknown')
         
         if class_name in ['cube', 'box', 'square']:
@@ -134,15 +127,13 @@ class MeshGenerator:
     def _clean_mesh(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
         """Nettoie et optimise le maillage"""
         if len(mesh.faces) < self.min_mesh_faces:
-            logger.warning(f"Maillage avec seulement {len(mesh.faces)} faces")
+            logger.warning(f"Meshs with only {len(mesh.faces)} faces")
         
-        # Suppression des composants déconnectés
         components = mesh.split(only_watertight=False)
         if len(components) > 1:
             largest_component = max(components, key=lambda x: len(x.faces))
             mesh = largest_component
         
-        # Réparation basique
         mesh.remove_duplicate_faces()
         mesh.remove_degenerate_faces()
         mesh.remove_unreferenced_vertices()
@@ -151,11 +142,11 @@ class MeshGenerator:
     
     def _apply_class_specific_processing(self, mesh: trimesh.Trimesh, 
                                        class_info: Dict[str, Any]) -> trimesh.Trimesh:
-        """Applique des traitements spécifiques selon la classe"""
+        """Applys specific class treatment"""
         confidence = class_info.get('confidence', 0.5)
         
-        # Ajustement de l'échelle selon la confiance
         if confidence < 0.5:
             mesh.apply_scale(0.9)
         
+
         return mesh
