@@ -19,21 +19,17 @@ from ..core.file_handler import BlenderExporter
 from ..utils.validation import validate_sketch_input, validate_mesh_output
 from ..config.settings import get_config
 
-# Configuration du logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
 config = get_config()
 
-# Initialisation de l'application
 app = FastAPI(
-    title="Sketch-to-3D API",
-    description="API pour convertir des sketches en modèles 3D",
+    title="DrawGen API",
+    description="API to converte sketches to 3D",
     version="1.0.0"
 )
 
-# Configuration CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,12 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialisation des composants
 sketch_processor = SketchProcessor(config['models'])
 mesh_generator = MeshGenerator(config['mesh_generation'])
 blender_exporter = BlenderExporter()
 
-# Stockage temporaire des tâches
 processing_tasks = {}
 
 class ProcessingStatus:
@@ -60,12 +54,12 @@ class ProcessingStatus:
 
 @app.get("/")
 async def root():
-    """Endpoint de base"""
-    return {"message": "Sketch-to-3D API", "status": "running", "version": "1.0.0"}
+    """Base Endpoint"""
+    return {"message": "DrawGen API", "status": "running", "version": "1.0.0"}
 
 @app.get("/health")
 async def health_check():
-    """Check de santé de l'API"""
+    """Health Check API"""
     return {
         "status": "healthy",
         "components": {
@@ -83,34 +77,27 @@ async def process_sketch(
     mesh_name: str = "Generated_Mesh"
 ):
     """
-    Endpoint principal pour traiter un sketch et générer un modèle 3D
+    Base Endpoint for 3D Modeling
     """
-    # Génération d'un ID unique pour la tâche
     task_id = str(uuid.uuid4())
     
     try:
-        # Validation du fichier
         if not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="Le fichier doit être une image")
+            raise HTTPException(status_code=400, detail="The file has to be an image")
         
-        # Lecture de l'image
         image_data = await file.read()
         image = Image.open(io.BytesIO(image_data))
         
-        # Conversion en array numpy
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
         image_array = np.array(image)
         
-        # Validation de l'image
         if not validate_sketch_input(image_array):
-            raise HTTPException(status_code=400, detail="Image de sketch invalide")
+            raise HTTPException(status_code=400, detail="Invalid Sketch Image")
         
-        # Initialisation du statut de traitement
         processing_tasks[task_id] = ProcessingStatus()
         
-        # Lancement du traitement en arrière-plan
         background_tasks.add_task(
             process_sketch_background,
             task_id,
@@ -121,33 +108,31 @@ async def process_sketch(
         return {
             "task_id": task_id,
             "status": "queued",
-            "message": "Traitement démarré"
+            "message": "Treatment started"
         }
         
     except Exception as e:
-        logger.error(f"Erreur lors de l'initialisation du traitement: {str(e)}")
+        logger.error(f"Initialization Error during processing: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_sketch_background(task_id: str, image_array: np.ndarray, mesh_name: str):
     """
-    Traitement en arrière-plan du sketch
+    Background treatment
     """
     task_status = processing_tasks[task_id]
     
     try:
-        # Étape 1: Traitement du sketch
         task_status.status = "processing"
         task_status.progress = 10
-        task_status.message = "Analyse du sketch..."
+        task_status.message = "Sketch analysis..."
         
         sketch_result = sketch_processor.process_sketch_to_3d(image_array)
         
         if sketch_result['status'] != 'success':
-            raise Exception(f"Erreur de traitement: {sketch_result.get('error_message', 'Erreur inconnue')}")
+            raise Exception(f"Treatment error: {sketch_result.get('error_message', 'Unknown error')}")
         
-        # Étape 2: Génération du maillage
         task_status.progress = 50
-        task_status.message = "Génération du maillage 3D..."
+        task_status.message = "3D mesh generation..."
         
         depth_map = sketch_result['depth_map'].squeeze()
         sketch_mask = (sketch_result['sketch_tensor'].squeeze() > 0.1).astype(np.float32)
@@ -158,17 +143,14 @@ async def process_sketch_background(task_id: str, image_array: np.ndarray, mesh_
             sketch_result['classification']
         )
         
-        # Validation du maillage
         mesh_validation = validate_mesh_output(mesh)
         if not mesh_validation['is_valid']:
-            logger.warning(f"Maillage invalide: {mesh_validation['errors']}")
+            logger.warning(f"Invalid meshs: {mesh_validation['errors']}")
         
-        # Étape 3: Export vers .blend
         task_status.progress = 80
-        task_status.message = "Export vers Blender..."
+        task_status.message = "Blender export..."
         
-        # Création d'un fichier temporaire
-        temp_dir = Path(tempfile.gettempdir()) / "sketch3d_results"
+        temp_dir = Path(tempfile.gettempdir()) / "drawgen_results"
         temp_dir.mkdir(exist_ok=True)
         
         blend_path = temp_dir / f"{task_id}.blend"
@@ -180,12 +162,11 @@ async def process_sketch_background(task_id: str, image_array: np.ndarray, mesh_
         )
         
         if not export_result['success']:
-            raise Exception(f"Erreur d'export: {export_result.get('error', 'Erreur inconnue')}")
+            raise Exception(f"Export error: {export_result.get('error', 'Unkown error')}")
         
-        # Finalisation
         task_status.status = "completed"
         task_status.progress = 100
-        task_status.message = "Traitement terminé avec succès"
+        task_status.message = "Treatment successfully ended"
         task_status.result = {
             "blend_file_path": str(blend_path),
             "mesh_stats": mesh_validation['stats'],
@@ -193,21 +174,21 @@ async def process_sketch_background(task_id: str, image_array: np.ndarray, mesh_
             "export_info": export_result
         }
         
-        logger.info(f"Traitement terminé pour la tâche {task_id}")
+        logger.info(f"Treatment ended for the task {task_id}")
         
     except Exception as e:
         task_status.status = "failed"
         task_status.error = str(e)
         task_status.message = f"Erreur: {str(e)}"
-        logger.error(f"Erreur lors du traitement de la tâche {task_id}: {str(e)}")
+        logger.error(f"Error during the task {task_id}: {str(e)}")
 
 @app.get("/api/v1/sketch/{task_id}/status")
 async def get_task_status(task_id: str):
     """
-    Récupère le statut d'une tâche de traitement
+    Fetch the task status during processing
     """
     if task_id not in processing_tasks:
-        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+        raise HTTPException(status_code=404, detail="Task not found")
     
     task_status = processing_tasks[task_id]
     
@@ -228,20 +209,20 @@ async def get_task_status(task_id: str):
 @app.get("/api/v1/sketch/{task_id}/download")
 async def download_blend_file(task_id: str):
     """
-    Télécharge le fichier .blend généré
+    Download the .blend generated file
     """
     if task_id not in processing_tasks:
-        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+        raise HTTPException(status_code=404, detail="Task not found")
     
     task_status = processing_tasks[task_id]
     
     if task_status.status != "completed":
-        raise HTTPException(status_code=400, detail="Traitement non terminé")
+        raise HTTPException(status_code=400, detail="Treatment not ended")
     
     blend_file_path = task_status.result["blend_file_path"]
     
     if not Path(blend_file_path).exists():
-        raise HTTPException(status_code=404, detail="Fichier .blend non trouvé")
+        raise HTTPException(status_code=404, detail=".blend file not found")
     
     return FileResponse(
         path=blend_file_path,
@@ -252,28 +233,26 @@ async def download_blend_file(task_id: str):
 @app.delete("/api/v1/sketch/{task_id}")
 async def delete_task(task_id: str):
     """
-    Supprime une tâche et nettoie les fichiers associés
+    Delete a task
     """
     if task_id not in processing_tasks:
-        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+        raise HTTPException(status_code=404, detail="Task not found")
     
     task_status = processing_tasks[task_id]
     
-    # Suppression des fichiers si ils existent
     if task_status.result and "blend_file_path" in task_status.result:
         blend_path = Path(task_status.result["blend_file_path"])
         if blend_path.exists():
             blend_path.unlink()
     
-    # Suppression de la tâche de la mémoire
     del processing_tasks[task_id]
     
-    return {"message": f"Tâche {task_id} supprimée avec succès"}
+    return {"message": f"Task {task_id} successfully deleted"}
 
 @app.get("/api/v1/models/status")
 async def get_models_status():
     """
-    Retourne le statut des modèles IA
+    Return AI Models Status
     """
     return {
         "sketch_classifier": {
@@ -297,18 +276,16 @@ if __name__ == "__main__":
         log_level="info"
     )
 
-# src/config/settings.py
 import yaml
 from pathlib import Path
 from typing import Dict, Any
 
 def get_config() -> Dict[str, Any]:
     """
-    Charge la configuration depuis le fichier YAML
+    Charge the configuration from the YAML file
     """
     config_path = Path(__file__).parent / "model_config.yaml"
     
-    # Configuration par défaut
     default_config = {
         "models": {
             "classifier": {
@@ -335,19 +312,17 @@ def get_config() -> Dict[str, Any]:
         }
     }
     
-    # Chargement du fichier de config si il existe
     if config_path.exists():
         with open(config_path, 'r') as f:
             file_config = yaml.safe_load(f)
         
-        # Fusion des configurations
         default_config.update(file_config)
     
     return default_config
 
 def _get_default_class_names():
     """
-    Retourne la liste des noms de classes par défaut (QuickDraw categories)
+    Return the class names (QuickDraw categories)
     """
     return [
         "aircraft carrier", "airplane", "alarm clock", "ambulance", "angel", "animal migration",
@@ -442,7 +417,7 @@ datasets:
 # scripts/train_models.py
 #!/usr/bin/env python3
 """
-Script d'entraînement des modèles Sketch-to-3D
+Training Scripts for DrawGen
 """
 
 import torch
@@ -459,7 +434,6 @@ import yaml
 import cv2
 from PIL import Image
 
-# Import des modèles
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -472,7 +446,7 @@ logger = logging.getLogger(__name__)
 
 class QuickDrawDataset(Dataset):
     """
-    Dataset pour les données QuickDraw
+    Dataset for the QuickDraw datas
     """
     def __init__(self, data_path: Path, categories: list, transform=None, samples_per_category=1000):
         self.data_path = data_path
@@ -480,11 +454,9 @@ class QuickDrawDataset(Dataset):
         self.transform = transform
         self.samples_per_category = samples_per_category
         
-        # Chargement des données
         self.data, self.labels = self._load_data()
         
     def _load_data(self):
-        """Charge les données QuickDraw depuis les fichiers .npy"""
         all_data = []
         all_labels = []
         
@@ -492,10 +464,8 @@ class QuickDrawDataset(Dataset):
             category_file = self.data_path / f"{category.replace(' ', '_')}.npy"
             
             if category_file.exists():
-                # Chargement des données de cette catégorie
                 category_data = np.load(category_file)
                 
-                # Limitation du nombre d'échantillons
                 if len(category_data) > self.samples_per_category:
                     indices = np.random.choice(len(category_data), self.samples_per_category, replace=False)
                     category_data = category_data[indices]
@@ -513,11 +483,9 @@ class QuickDrawDataset(Dataset):
         return len(self.data)
     
     def __getitem__(self, idx):
-        # Les données QuickDraw sont des vecteurs de strokes, conversion en image
         sketch_data = self.data[idx]
         label = self.labels[idx]
         
-        # Conversion des strokes en image
         image = self._strokes_to_image(sketch_data)
         
         if self.transform:
@@ -526,21 +494,18 @@ class QuickDrawDataset(Dataset):
         return image, label
     
     def _strokes_to_image(self, strokes, image_size=256):
-        """Convertit les strokes QuickDraw en image"""
+        """Convert QuickDraw strokes to images"""
         image = np.zeros((image_size, image_size), dtype=np.uint8)
         
-        # Parsing des strokes (format QuickDraw)
         for stroke in strokes:
             if len(stroke) >= 2:
                 x_coords = stroke[0]
                 y_coords = stroke[1]
                 
-                # Normalisation des coordonnées
                 if len(x_coords) > 1 and len(y_coords) > 1:
                     x_coords = np.array(x_coords) * image_size / 255
                     y_coords = np.array(y_coords) * image_size / 255
                     
-                    # Dessin des lignes
                     points = np.column_stack((x_coords, y_coords)).astype(int)
                     for i in range(len(points) - 1):
                         cv2.line(image, tuple(points[i]), tuple(points[i + 1]), 255, 2)
@@ -549,18 +514,17 @@ class QuickDrawDataset(Dataset):
 
 class SketchDepthDataset(Dataset):
     """
-    Dataset pour l'entraînement de l'estimateur de profondeur
+    Dataset for depth training
     """
     def __init__(self, sketch_path: Path, depth_path: Path, transform=None):
         self.sketch_path = sketch_path
         self.depth_path = depth_path
         self.transform = transform
         
-        # Liste des fichiers
         self.sketch_files = list(sketch_path.glob("*.png")) + list(sketch_path.glob("*.jpg"))
         self.sketch_files = [f for f in self.sketch_files if (depth_path / f.name).exists()]
         
-        logger.info(f"Trouvé {len(self.sketch_files)} paires sketch-depth")
+        logger.info(f"Found {len(self.sketch_files)} peers sketch-depth")
     
     def __len__(self):
         return len(self.sketch_files)
@@ -569,10 +533,8 @@ class SketchDepthDataset(Dataset):
         sketch_file = self.sketch_files[idx]
         depth_file = self.depth_path / sketch_file.name
         
-        # Chargement du sketch
-        sketch = Image.open(sketch_file).convert('L')  # Niveaux de gris
+        sketch = Image.open(sketch_file).convert('L')
         
-        # Chargement de la carte de profondeur
         depth = Image.open(depth_file).convert('L')
         
         if self.transform:
@@ -583,56 +545,46 @@ class SketchDepthDataset(Dataset):
 
 def train_classifier(config):
     """
-    Entraîne le classificateur de sketches
+    Sketches classificators training
     """
-    logger.info("Début de l'entraînement du classificateur")
+    logger.info("Training classificator started")
     
-    # Paramètres
     num_classes = config['models']['classifier']['num_classes']
     batch_size = config['models']['classifier']['batch_size']
     learning_rate = config['models']['classifier']['learning_rate']
     epochs = config['models']['classifier']['epochs']
     
-    # Transformations
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
     
-    # Dataset (simulé pour cet exemple)
-    # En production, utilisez le vrai dataset QuickDraw
     dataset = QuickDrawDataset(
         data_path=Path(config['training']['data_path']) / 'quickdraw',
-        categories=config['models']['classifier']['class_names'][:50],  # Sous-ensemble pour test
+        categories=config['models']['classifier']['class_names'][:50],
         transform=transform,
         samples_per_category=100
     )
     
-    # Séparation train/val
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
     
-    # DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
     
-    # Modèle
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SketchClassifier(num_classes=len(dataset.categories), backbone='resnet18')
     model.to(device)
     
-    # Optimiseur et loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
     
-    # Boucle d'entraînement
     best_val_acc = 0.0
     
     for epoch in range(epochs):
-        # Phase d'entraînement
         model.train()
         train_loss = 0.0
         train_correct = 0
@@ -658,7 +610,6 @@ def train_classifier(config):
                 'Acc': f'{100 * train_correct / train_total:.2f}%'
             })
         
-        # Phase de validation
         model.eval()
         val_loss = 0.0
         val_correct = 0
@@ -675,13 +626,11 @@ def train_classifier(config):
                 val_total += labels.size(0)
                 val_correct += (predicted == labels).sum().item()
         
-        # Calcul des métriques
         train_acc = 100 * train_correct / train_total
         val_acc = 100 * val_correct / val_total
         
         logger.info(f'Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%')
         
-        # Sauvegarde du meilleur modèle
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             checkpoint_path = Path(config['training']['checkpoint_dir']) / 'classifier_best.pth'
@@ -702,38 +651,30 @@ def train_classifier(config):
 
 def train_depth_estimator(config):
     """
-    Entraîne l'estimateur de profondeur
+    Training with depth estimator
     """
-    logger.info("Début de l'entraînement de l'estimateur de profondeur")
+    logger.info("Start of the depth estimator training")
     
-    # Paramètres
     batch_size = config['models']['depth_estimator']['batch_size']
     learning_rate = config['models']['depth_estimator']['learning_rate']
     epochs = config['models']['depth_estimator']['epochs']
     
-    # Transformations
     transform = transforms.Compose([
         transforms.Resize((512, 512)),
         transforms.ToTensor()
     ])
     
-    # Pour cet exemple, on simule un dataset
-    # En production, utilisez des vrais pairs sketch-depth
-    logger.warning("Dataset depth simulé - implémentez votre dataset réel")
+    logger.warning("Dataset depth estimated - implement your true dataset")
     
-    # Modèle
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = DepthEstimator(input_channels=1, output_channels=1, features=64)
     model.to(device)
     
-    # Optimiseur et loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.MSELoss()  # Pour la régression de profondeur
+    criterion = nn.MSELoss()
     
-    # Simulation d'entraînement (remplacez par votre vraie boucle)
-    logger.info("Simulation d'entraînement terminée")
+    logger.info("Training simulation completed")
     
-    # Sauvegarde
     checkpoint_path = Path(config['training']['checkpoint_dir']) / 'depth_estimator_best.pth'
     checkpoint_path.parent.mkdir(exist_ok=True)
     
@@ -743,30 +684,28 @@ def train_depth_estimator(config):
     }, checkpoint_path)
 
 def main():
-    parser = argparse.ArgumentParser(description='Entraînement des modèles Sketch-to-3D')
+    parser = argparse.ArgumentParser(description='DrawGen models training')
     parser.add_argument('--model', choices=['classifier', 'depth', 'all'], 
-                       default='all', help='Modèle à entraîner')
+                       default='all', help='Models to train')
     parser.add_argument('--config', type=str, default='config/model_config.yaml',
-                       help='Chemin vers le fichier de configuration')
+                       help='Path to configuration file')
     
     args = parser.parse_args()
     
-    # Chargement de la configuration
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
     
-    # Création des dossiers nécessaires
     Path(config['training']['checkpoint_dir']).mkdir(exist_ok=True)
     Path(config['training']['log_dir']).mkdir(exist_ok=True)
     
-    # Entraînement
     if args.model in ['classifier', 'all']:
         train_classifier(config)
     
     if args.model in ['depth', 'all']:
         train_depth_estimator(config)
     
-    logger.info("Entraînement terminé !")
+    logger.info("Training ended!")
 
 if __name__ == "__main__":
+
     main()
