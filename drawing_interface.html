@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sketch-to-3D - Interface de Dessin</title>
+    <title>DrawGen - Drawing Interface</title>
     <style>
         * {
             margin: 0;
@@ -252,53 +252,53 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>✨ Sketch-to-3D</h1>
-            <p>Dessinez votre idée et transformez-la en modèle 3D</p>
+            <h1>DrawGen</h1>
+            <p>Draw your ideas to make them live</p>
         </div>
 
         <div class="main-content">
-            <!-- Zone de dessin -->
+            <!-- Drawing area -->
             <div class="drawing-panel">
-                <h2>🎨 Zone de Dessin</h2>
+                <h2>🎨 Drawing area</h2>
                 
                 <div class="toolbar">
                     <div class="tool-group">
-                        <button id="penTool" class="btn-primary">✏️ Pinceau</button>
-                        <button id="eraserTool" class="btn-secondary">🧹 Gomme</button>
+                        <button id="penTool" class="btn-primary">✏️ Brush</button>
+                        <button id="eraserTool" class="btn-secondary">🧹 Eraser</button>
                     </div>
                     
                     <div class="tool-group">
-                        <label>Taille:</label>
+                        <label>Size:</label>
                         <input type="range" id="brushSize" class="size-slider" min="1" max="20" value="3">
                         <span id="sizeDisplay">3px</span>
                     </div>
                     
-                    <button id="clearCanvas" class="btn-danger">🗑️ Effacer</button>
+                    <button id="clearCanvas" class="btn-danger">🗑️ Trash</button>
                 </div>
 
                 <canvas id="drawingCanvas" width="500" height="400"></canvas>
                 
                 <div style="text-align: center; margin-top: 20px;">
                     <button id="generateBtn" class="btn-success">
-                        🚀 Générer le modèle 3D
+                        🚀 Generate the 3D Model
                     </button>
                 </div>
             </div>
 
-            <!-- Résultats -->
+            <!-- Results -->
             <div class="result-panel">
-                <h2>🔺 Résultat 3D</h2>
+                <h2>🔺 3D Result</h2>
                 
                 <div id="statusCard" class="status-card status-idle">
-                    <h3>Prêt à générer</h3>
-                    <p>Dessinez quelque chose et cliquez sur "Générer le modèle 3D"</p>
+                    <h3>Ready to generate</h3>
+                    <p>Draw something and click on "Generate the 3D model"</p>
                 </div>
 
                 <div id="progressContainer" style="display: none;">
                     <div class="progress-bar">
                         <div id="progressFill" class="progress-fill"></div>
                     </div>
-                    <p id="progressText">Préparation...</p>
+                    <p id="progressText">Preparation...</p>
                 </div>
 
                 <div id="modelInfo" class="model-info" style="display: none;">
@@ -308,7 +308,7 @@
                     <p><strong>Faces:</strong> <span id="modelFaces">-</span></p>
                     
                     <button id="downloadBtn" class="btn-success download-btn" style="display: none;">
-                        💾 Télécharger le modèle 3D (.obj)
+                        💾 Download the 3D Model (.obj)
                     </button>
                 </div>
             </div>
@@ -316,7 +316,6 @@
     </div>
 
     <script>
-        // Variables globales
         const canvas = document.getElementById('drawingCanvas');
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
@@ -326,13 +325,11 @@
         let lastY = 0;
         let currentTaskId = null;
 
-        // Configuration du canvas
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Outils de dessin
         document.getElementById('penTool').addEventListener('click', () => {
             currentTool = 'pen';
             canvas.style.cursor = 'crosshair';
@@ -360,7 +357,6 @@
             document.getElementById('eraserTool').className = currentTool === 'eraser' ? 'btn-primary' : 'btn-secondary';
         }
 
-        // Fonctions de dessin
         function startDrawing(e) {
             isDrawing = true;
             [lastX, lastY] = getMousePos(e);
@@ -403,13 +399,11 @@
             ];
         }
 
-        // Event listeners pour le dessin
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
 
-        // Support tactile
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
@@ -436,12 +430,11 @@
             canvas.dispatchEvent(mouseEvent);
         });
 
-        // Génération 3D
         document.getElementById('generateBtn').addEventListener('click', async () => {
             const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             
             if (isCanvasEmpty()) {
-                alert('Veuillez dessiner quelque chose avant de générer le modèle 3D !');
+                alert('Please draw something before generating a 3D model!');
                 return;
             }
 
@@ -452,13 +445,11 @@
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
             
-            // Vérifier s'il y a des pixels non-blancs
             for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];     // Rouge
-                const g = data[i + 1]; // Vert  
-                const b = data[i + 2]; // Bleu
+                const r = data[i];
+                const g = data[i + 1];  
+                const b = data[i + 2];
                 
-                // Si un pixel n'est pas blanc (255,255,255), le canvas n'est pas vide
                 if (r < 255 || g < 255 || b < 255) {
                     return false;
                 }
@@ -471,17 +462,15 @@
             const progressContainer = document.getElementById('progressContainer');
             const modelInfo = document.getElementById('modelInfo');
             
-            // Reset UI
             statusCard.className = 'status-card status-processing';
-            statusCard.innerHTML = '<h3><span class="loading-spinner"></span>Traitement en cours</h3><p>Envoi du dessin à l\'IA...</p>';
+            statusCard.innerHTML = '<h3><span class="loading-spinner"></span>Traitement en cours</h3><p>Sending drawing to AI...</p>';
             progressContainer.style.display = 'block';
             modelInfo.style.display = 'none';
             
             try {
-                // Upload du dessin
                 const formData = new FormData();
                 formData.append('file', imageBlob, 'sketch.png');
-                formData.append('mesh_name', 'Mon_Dessin_3D');
+                formData.append('mesh_name', 'DrawGen_3D');
 
                 const response = await fetch('http://127.0.0.1:8000/api/v1/sketch/process', {
                     method: 'POST',
@@ -491,16 +480,15 @@
                 const result = await response.json();
                 currentTaskId = result.task_id;
 
-                // Polling du statut
                 await pollTaskStatus(currentTaskId);
 
             } catch (error) {
-                showError('Erreur de traitement: ' + error.message);
+                showError('Treatment error: ' + error.message);
             }
         }
 
         async function pollTaskStatus(taskId) {
-            const maxAttempts = 60; // 2 minutes max
+            const maxAttempts = 60;
             let attempts = 0;
 
             const poll = async () => {
@@ -513,15 +501,15 @@
                     if (status.status === 'completed') {
                         showSuccess(status.result);
                     } else if (status.status === 'failed') {
-                        showError(status.error || 'Traitement échoué');
+                        showError(status.error || 'Treatment failed');
                     } else if (attempts < maxAttempts) {
                         attempts++;
                         setTimeout(poll, 2000);
                     } else {
-                        showError('Timeout: le traitement prend trop de temps');
+                        showError('Timeout: treatment takes to much time');
                     }
                 } catch (error) {
-                    showError('Erreur de communication: ' + error.message);
+                    showError('Communication error: ' + error.message);
                 }
             };
 
@@ -542,11 +530,10 @@
             const modelInfo = document.getElementById('modelInfo');
             
             statusCard.className = 'status-card status-success';
-            statusCard.innerHTML = '<h3>✅ Modèle 3D généré avec succès !</h3><p>Votre dessin a été transformé en modèle 3D</p>';
+            statusCard.innerHTML = '<h3>✅ 3D Model Successfully Generated !</h3><p>Your drawing has been transformed to 3D model!</p>';
             progressContainer.style.display = 'none';
             modelInfo.style.display = 'block';
             
-            // Affichage des informations
             document.getElementById('modelClass').textContent = result.classification.class_name;
             document.getElementById('modelConfidence').textContent = (result.classification.confidence * 100).toFixed(1) + '%';
             document.getElementById('modelVertices').textContent = result.mesh_stats.num_vertices ? result.mesh_stats.num_vertices.toString() : '-';
@@ -562,7 +549,7 @@
             const progressContainer = document.getElementById('progressContainer');
             
             statusCard.className = 'status-card status-error';
-            statusCard.innerHTML = `<h3>❌ Erreur</h3><p>${message}</p>`;
+            statusCard.innerHTML = `<h3>❌ Error</h3><p>${message}</p>`;
             progressContainer.style.display = 'none';
         }
 
@@ -580,9 +567,10 @@
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } catch (error) {
-                alert('Erreur lors du téléchargement: ' + error.message);
+                alert('Download error: ' + error.message);
             }
         }
     </script>
 </body>
+
 </html>
