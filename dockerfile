@@ -1,14 +1,12 @@
 # docker/Dockerfile
 FROM nvidia/cuda:11.8-devel-ubuntu20.04
 
-# Variables d'environnement
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
 ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
-# Installation des dépendances système
 RUN apt-get update && apt-get install -y \
     python3.9 \
     python3.9-dev \
@@ -27,47 +25,35 @@ RUN apt-get update && apt-get install -y \
     libxmu6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Installation de Blender (headless)
 RUN wget -q https://download.blender.org/release/Blender3.6/blender-3.6.0-linux-x64.tar.xz && \
     tar -xf blender-3.6.0-linux-x64.tar.xz && \
     mv blender-3.6.0-linux-x64 /opt/blender && \
     ln -s /opt/blender/blender /usr/local/bin/blender && \
     rm blender-3.6.0-linux-x64.tar.xz
 
-# Configuration Python
 RUN python3.9 -m pip install --upgrade pip setuptools wheel
 
-# Création du répertoire de travail
 WORKDIR /app
 
-# Copie des requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Installation de PyTorch avec support CUDA
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Copie du code source
 COPY . .
 
-# Installation du package
 RUN pip install -e .
 
-# Création des dossiers nécessaires
 RUN mkdir -p /app/data/models /app/data/temp /app/logs
 
-# Téléchargement des modèles pré-entraînés (si disponibles)
 # RUN python scripts/download_models.py
 
-# Exposition du port
 EXPOSE 8000
 
-# Variables d'environnement pour l'application
 ENV PYTHONPATH=/app
 ENV MODEL_PATH=/app/data/models
 ENV TEMP_PATH=/app/data/temp
 
-# Commande de démarrage
 CMD ["python", "-m", "src.api.main"]
 
 # docker/docker-compose.yml
@@ -121,70 +107,58 @@ volumes:
 # scripts/setup_environment.sh
 #!/bin/bash
 
-# Script de configuration de l'environnement de développement
 
 set -e
 
-echo "=== Configuration de l'environnement Sketch-to-3D ==="
+echo "=== Environnement for DrawGen ==="
 
-# Vérification de Python 3.9+
 python_version=$(python3 --version 2>&1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
 required_version="3.9"
 
 if [ "$(printf '%s\n' "$required_version" "$python_version" | sort -V | head -n1)" != "$required_version" ]; then
-    echo "Erreur: Python 3.9+ requis. Version détectée: $python_version"
+    echo "Error: Python 3.9+ recquired. Version detected: $python_version"
     exit 1
 fi
 
 echo "✓ Python version OK: $python_version"
 
-# Création de l'environnement virtuel
 if [ ! -d "venv" ]; then
-    echo "Création de l'environnement virtuel..."
+    echo "Virtual environnement creation..."
     python3 -m venv venv
 fi
 
-# Activation de l'environnement virtuel
 source venv/bin/activate
-echo "✓ Environnement virtuel activé"
+echo "✓ Virtual environnement activation"
 
-# Mise à jour de pip
 pip install --upgrade pip setuptools wheel
 
-# Installation des dépendances
-echo "Installation des dépendances Python..."
+echo "Python dependancies installation..."
 pip install -r requirements.txt
 
-# Vérification de CUDA (optionnel)
 if command -v nvidia-smi &> /dev/null; then
-    echo "✓ NVIDIA GPU détecté:"
+    echo "✓ NVIDIA GPU detected:"
     nvidia-smi --query-gpu=name --format=csv,noheader
     
-    # Installation de PyTorch avec CUDA
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 else
-    echo "⚠ Aucun GPU NVIDIA détecté, installation PyTorch CPU"
+    echo "⚠ No NVIDIA GPU detected, PyTorch CPU will be installed"
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 fi
 
-# Création des dossiers nécessaires
-echo "Création de la structure des dossiers..."
+echo "Folders structure creation..."
 mkdir -p data/{datasets,models,temp}
 mkdir -p logs
 mkdir -p checkpoints
 mkdir -p src/models/model_weights
 
-echo "✓ Dossiers créés"
+echo "✓ Folders created"
 
-# Installation d'Open3D
 echo "Installation d'Open3D..."
 pip install open3d
 
-# Installation de Trimesh
 pip install trimesh
 
-# Test des imports principaux
-echo "Test des imports..."
+echo "Import tests..."
 python3 -c "
 import torch
 import cv2
@@ -709,4 +683,5 @@ make docker-run
 - **Tests** : `make test`
 - **Linting** : `make lint`  
 - **Format** : `make format`
+
 - **Clean** : `make clean`
